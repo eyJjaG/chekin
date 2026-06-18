@@ -433,7 +433,7 @@
                 <!-- Buttons -->
                 <div class="btn-group">
                     <button class="btn btn-checkin" id="btnCheckin" onclick="checkin()">今日打卡</button>
-                    <button class="btn btn-reset" onclick="showResetModal()">重置</button>
+                    <button class="btn btn-reset" onclick="showResetModal()">清除数据</button>
                 </div>
 
                 <!-- Stats -->
@@ -701,9 +701,13 @@
             const remote = await fetchRemoteData();
             if (!remote) { updateSyncBadge('error'); return; }
             if (remote._notFound) { updateSyncBadge('synced'); return; }
-            const merged = mergeData(remote, prepareSyncPayload(data));
-            delete merged._sha; data = merged; saveLocalData(data);
-            updateUI(); updateSyncBadge('synced');
+            // Remote is authoritative on load — replace local entirely
+            delete remote._sha;
+            data = remote;
+            recalcStats();
+            saveLocalData(data);
+            updateUI();
+            updateSyncBadge('synced');
         }
 
         async function syncAfterChange() {
@@ -903,9 +907,23 @@
             showToast('打卡成功！坚持就是胜利！');
         }
 
-        function resetAllData() {
+        async function resetAllData() {
             data = { checkins: {}, currentStreak: 0, bestStreak: 0, totalDays: 0, lastCheckinDate: null };
-            saveLocalData(data); hideResetModal(); updateUI(); syncAfterChange();
+            saveLocalData(data);
+            hideResetModal();
+            updateUI();
+
+            // Push empty data directly — don't merge with remote
+            const token = getToken();
+            if (token) {
+                const remote = await fetchRemoteData();
+                const payload = prepareSyncPayload(data);
+                if (remote && !remote._notFound) payload._sha = remote._sha;
+                const result = await pushRemoteData(payload);
+                updateSyncBadge(result.ok ? 'synced' : 'error');
+            } else {
+                updateSyncBadge('no_token');
+            }
             showToast('所有数据已清除');
         }
         function showResetModal() { document.getElementById('resetModal').classList.add('active'); }
