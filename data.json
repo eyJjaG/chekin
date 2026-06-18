@@ -1,10 +1,8 @@
 {
-  "checkins": {
-    "2026-06-18": true
-  },
-  "lastCheckinDate": "2026-06-18",
-  "totalDays": 1,
-  "currentStreak": 1,
-  "bestStreak": 1,
-  "_sha": "936674cb48ee4b831661511e204236721798d6ac"
+  "checkins": {},
+  "lastCheckinDate": null,
+  "currentStreak": 0,
+  "bestStreak": 0,
+  "totalDays": 0,
+  "_sha": "e099820c5749f527bc62c1513d1091c208ddb535"
 }
