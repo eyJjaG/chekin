@@ -2,7 +2,7 @@
   "habits": [
     {
       "id": "default",
-      "name": "Ã¨ÂÂªÃ¥Â¾ÂÃ¦ÂÂÃ¥ÂÂ¡",
+      "name": "自律打卡",
       "icon": "Ã°ÂÂÂª",
       "color": "#7c6ff7",
       "createdAt": "2026-06-19T03:59:06.118Z",
@@ -19,6 +19,5 @@
       "bestStreak": 2
     }
   ],
-  "activeHabitId": "default",
-  "_sha": "081a9a1fa3337166b16628dc1dbc4d105c62f24c"
+  "activeHabitId": "default"
 }
