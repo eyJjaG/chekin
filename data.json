@@ -10,15 +10,10 @@
         "2026-06-18": {
           "time": "",
           "note": ""
-        },
-        "2026-06-19": {
-          "time": "12:05",
-          "note": ""
         }
       },
-      "bestStreak": 2
+      "bestStreak": 1
     }
   ],
-  "activeHabitId": "default",
-  "_sha": "068231b23682bc7521bacd2575f5225c7b376f30"
+  "activeHabitId": "default"
 }
