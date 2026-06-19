@@ -2,23 +2,18 @@
   "habits": [
     {
       "id": "default",
-      "name": "ÃÂ¨ÃÂÃÂªÃÂ¥ÃÂ¾ÃÂÃÂ¦ÃÂÃÂÃÂ¥ÃÂÃÂ¡",
-      "icon": "ÃÂ°ÃÂÃÂÃÂª",
+      "name": "Ã¨ÂÂªÃ¥Â¾ÂÃ¦ÂÂÃ¥ÂÂ¡",
+      "icon": "Ã°ÂÂÂª",
       "color": "#7c6ff7",
       "createdAt": "2026-06-19T03:59:06.118Z",
       "checkins": {
         "2026-06-18": {
           "time": "",
           "note": ""
-        },
-        "2026-06-19": {
-          "time": "12:04",
-          "note": ""
         }
       },
-      "bestStreak": 2
+      "bestStreak": 1
     }
   ],
-  "activeHabitId": "default",
-  "_sha": "57e685c3e4e43dd1c3393c45b8b964be3835d17e"
+  "activeHabitId": "default"
 }
