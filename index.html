@@ -583,10 +583,12 @@
                 <div style="font-size:12px;color:var(--text-muted);letter-spacing:1px;margin-bottom:10px;">☁️ 云端同步</div>
                 <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">远程 SHA: <span id="devSha" style="font-family:monospace;color:var(--text-secondary);">--</span></div>
                 <div id="devError" style="color:var(--danger);font-size:11px;margin-bottom:8px;min-height:16px;"></div>
-                <div style="display:flex;gap:6px;">
+                <div id="devGarbledWarn" style="display:none;background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:var(--danger);"></div>
+                <div style="display:flex;gap:6px;margin-bottom:6px;">
                     <button class="btn-cancel" onclick="devPull()" style="flex:1;padding:7px;font-size:12px;">📥 从云端覆盖本地</button>
                     <button class="btn-cancel" onclick="devPush()" style="flex:1;padding:7px;font-size:12px;color:var(--success);">🚀 推送到云端</button>
                 </div>
+                <button class="btn-cancel" onclick="devRepair()" style="width:100%;padding:7px;font-size:12px;color:var(--warning);border-color:var(--warning);">🩹 修复乱码数据（保留打卡记录）</button>
                 <div id="devSyncNote" style="font-size:10px;color:var(--text-muted);margin-top:6px;"></div>
             </div>
 
@@ -683,11 +685,12 @@
                 const resp=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${DATA_PATH}`,{headers:apiHeaders(),cache:'no-store'});
                 if(resp.status===404)return{_notFound:true};
                 if(!resp.ok){const b=await resp.text();throw new Error(`HTTP ${resp.status}: ${b.slice(0,200)}`);}
-                const j=await resp.json(),raw=atob(j.content.replace(/\s/g,'')),obj=JSON.parse(raw);
+                const j=await resp.json(),raw=b64Decode(j.content.replace(/\s/g,'')),obj=JSON.parse(raw);
                 obj._sha=j.sha;return obj;
             }catch(e){console.error('fetchRemoteData:',e);return null;}
         }
         function b64Encode(str){const bytes=new TextEncoder().encode(str);let b='';for(let i=0;i<bytes.length;i++)b+=String.fromCharCode(bytes[i]);return btoa(b);}
+        function b64Decode(b64){const raw=atob(b64.replace(/\s/g,''));const bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);return new TextDecoder().decode(bytes);}
         async function pushRemoteData(dataObj){
             const token=getToken();if(!token)return{ok:false,error:'no_token'};
             try{
@@ -1298,6 +1301,7 @@
             devRefreshHabitList();
             devOnHabitChange();
             devRefreshSha();
+            checkGarbled();
         }
         function hideDevModal(){
             document.getElementById('devModal').classList.remove('active');
@@ -1458,7 +1462,7 @@
                 const resp=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${DATA_PATH}`,{headers:apiHeaders(),cache:'no-store'});
                 if(!resp.ok){const b=await resp.text();throw new Error(`HTTP ${resp.status}: ${b.slice(0,200)}`);}
                 const j=await resp.json();
-                const raw=atob(j.content.replace(/\s/g,''));
+                const raw=b64Decode(j.content.replace(/\s/g,''));
                 const obj=JSON.parse(raw);
                 data=migrateOldData(obj);
                 saveLocalData(data);
@@ -1491,6 +1495,100 @@
                 document.getElementById('devSyncNote').textContent='远程已更新';
                 showToast('✅ 已推送到 GitHub');
             }catch(e){document.getElementById('devError').textContent='推送异常: '+e.message;}
+        }
+
+        function isGarbledName(name){
+            if(!name)return false;
+            // Chinese chars are U+4E00–U+9FFF, CJK extension A U+3400–U+4DBF, fullwidth etc.
+            // Garbled text from double-encoding: mostly Latin-1 supplement, control chars
+            // Check: if name contains only ASCII-friendly/sane Unicode AND has non-ASCII that looks garbled
+            for(let i=0;i<name.length;i++){
+                const c=name.charCodeAt(i);
+                // Control chars (except space) = suspicious
+                if(c<0x20&&c!==0x20)return true;
+                // Surrogate halves without partner
+                if(c>=0xD800&&c<=0xDFFF)return true;
+            }
+            // Detects double-encoded UTF-8: bytes like 0xC3 0x82 etc. when decoded as Latin-1
+            // Common double-encoding patterns: Ã (0xC3) followed by other high bytes
+            // Quick check: if name contains "Ã" (U+00C3) or "Â" (U+00C2), it's likely garbled
+            if(/[À-ÿ]{2,}/.test(name))return true;
+            // If name has emoji-like characters mixed with Latin-1 garbage
+            if(/[-¿]/.test(name)&&!/[一-鿿]/.test(name))return true;
+            // Longer names that have no CJK but have high Latin-1: likely garbled
+            if(name.length>3&&!/[一-鿿぀-ヿ가-힯]/.test(name)&&/[-ÿ]/.test(name))return true;
+            return false;
+        }
+
+        function checkGarbled(){
+            const warn=document.getElementById('devGarbledWarn');
+            warn.style.display='none';
+            const garbled=[];
+            for(const h of data.habits){
+                if(isGarbledName(h.name))garbled.push(`习惯"${h.name}"`);
+            }
+            // Also check checkin notes
+            for(const h of data.habits){
+                for(const[k,v]of Object.entries(h.checkins)){
+                    if(v&&typeof v==='object'&&v.note&&isGarbledName(v.note)){
+                        if(!garbled.some(g=>g.includes(h.name)))garbled.push(`习惯"${h.name}"的备注`);
+                    }
+                }
+            }
+            if(garbled.length>0){
+                warn.style.display='block';
+                warn.textContent='⚠️ 检测到 '+(garbled.length>1?'多处':'一个')+'数据乱码（UTF-8 双重编码），请点击下方「修复乱码数据」恢复';
+            }
+        }
+
+        async function devRepair(){
+            let fixedCount=0,fixedNames=[];
+            for(const h of data.habits){
+                if(isGarbledName(h.name)){
+                    const oldName=h.name;
+                    h.name='自律打卡'+(fixedNames.length?' '+String.fromCharCode(9311+fixedNames.length):'');
+                    fixedNames.push(oldName);
+                    fixedCount++;
+                }
+                // Fix garbled notes
+                for(const[k,v]of Object.entries(h.checkins)){
+                    if(v&&typeof v==='object'&&v.note&&isGarbledName(v.note)){
+                        v.note='';
+                        fixedCount++;
+                    }
+                }
+            }
+            if(fixedCount===0){
+                showToast('未检测到乱码数据');
+                document.getElementById('devGarbledWarn').style.display='none';
+                return;
+            }
+            saveLocalData(data);
+            devRefreshHabitList();
+            devOnHabitChange();
+            updateUI();
+            checkGarbled();
+            showToast('已修复 '+fixedCount+' 处乱码，推送至云端…');
+            // Push to GitHub
+            const token=getToken();
+            if(token){
+                let sha=null;
+                try{
+                    const resp=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${DATA_PATH}`,{headers:apiHeaders(),cache:'no-store'});
+                    if(resp.ok){const j=await resp.json();sha=j.sha;}
+                }catch(e){}
+                const payload={habits:data.habits,activeHabitId:data.activeHabitId};
+                const body={message:'Repair garbled UTF-8 data',content:b64Encode(JSON.stringify(payload,null,2))};
+                if(sha)body.sha=sha;
+                try{
+                    const resp=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${DATA_PATH}`,{method:'PUT',headers:apiHeaders(),body:JSON.stringify(body)});
+                    const rb=await resp.json();
+                    if(resp.ok){devRefreshSha();showToast('✅ 修复并推送成功！刷新页面即可');}
+                    else{showToast('修复失败: '+(rb.message||'推送错误'));}
+                }catch(e){showToast('推送异常: '+e.message);}
+            }else{
+                showToast('已修复（无 Token 未推送云端）');
+            }
         }
 
         // ==================== Event Bindings ====================
