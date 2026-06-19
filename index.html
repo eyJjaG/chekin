@@ -117,8 +117,8 @@
         }
         .habit-tab:hover { border-color: var(--accent); color: var(--text); }
         .habit-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 2px 12px var(--accent-glow); }
-        .habit-tab .habit-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.5; }
-        .habit-tab.active .habit-dot { opacity: 1; background: #fff; }
+        .habit-tab .habit-dot { width: 8px; height: 8px; border-radius: 50%; opacity: 1; flex-shrink: 0; }
+        .habit-tab.active .habit-dot { background: rgba(255,255,255,0.7) !important; }
         .habit-tab .habit-actions { margin-left: 4px; display: flex; gap: 2px; }
         .habit-tab .habit-edit, .habit-tab .habit-del {
             width: 18px; height: 18px; border-radius: 50%; border: none; cursor: pointer;
@@ -305,7 +305,6 @@
         .modal .hint { font-size:10px; color:var(--text-muted); margin-bottom:14px; line-height:1.6; text-align:left; }
         .modal .hint a { color:var(--accent); text-decoration:none; }
         .modal .hint a:hover { text-decoration:underline; }
-        .emoji-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:6px; margin-bottom:14px; }
         .emoji-opt { font-size:20px; padding:6px; border-radius:8px; cursor:pointer; border:1px solid transparent; background:transparent; transition:all var(--transition); text-align:center; }
         .emoji-opt:hover { background:var(--card-hover); border-color:var(--border); }
         .emoji-opt.selected { border-color:var(--accent); background:var(--success-bg); }
@@ -514,7 +513,6 @@
         <div class="modal">
             <h3 id="habitModalTitle">新建习惯</h3>
             <input type="text" id="habitNameInput" placeholder="习惯名称" maxlength="12">
-            <div class="emoji-grid" id="emojiGrid"></div>
             <div class="color-presets" id="colorPresets"></div>
             <div class="btn-group">
                 <button class="btn-cancel" onclick="hideHabitModal()">取消</button>
@@ -553,7 +551,6 @@
                 </div>
                 <div id="devHabitEditor" style="display:none;">
                     <input id="devHabitName" placeholder="名称" maxlength="12" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;background:var(--bg-secondary);color:var(--text);font-size:12px;font-family:inherit;margin-bottom:8px;outline:none;">
-                    <div id="devEmojiGrid" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;"></div>
                     <div id="devColorGrid" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
                     <button class="btn-cancel" onclick="devSaveHabit()" style="width:100%;padding:7px;font-size:12px;color:var(--success);">💾 保存习惯</button>
                 </div>
@@ -583,12 +580,10 @@
                 <div style="font-size:12px;color:var(--text-muted);letter-spacing:1px;margin-bottom:10px;">☁️ 云端同步</div>
                 <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">远程 SHA: <span id="devSha" style="font-family:monospace;color:var(--text-secondary);">--</span></div>
                 <div id="devError" style="color:var(--danger);font-size:11px;margin-bottom:8px;min-height:16px;"></div>
-                <div id="devGarbledWarn" style="display:none;background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:var(--danger);"></div>
-                <div style="display:flex;gap:6px;margin-bottom:6px;">
+                <div style="display:flex;gap:6px;">
                     <button class="btn-cancel" onclick="devPull()" style="flex:1;padding:7px;font-size:12px;">📥 从云端覆盖本地</button>
                     <button class="btn-cancel" onclick="devPush()" style="flex:1;padding:7px;font-size:12px;color:var(--success);">🚀 推送到云端</button>
                 </div>
-                <button class="btn-cancel" onclick="devRepair()" style="width:100%;padding:7px;font-size:12px;color:var(--warning);border-color:var(--warning);">🩹 修复乱码数据（保留打卡记录）</button>
                 <div id="devSyncNote" style="font-size:10px;color:var(--text-muted);margin-top:6px;"></div>
             </div>
 
@@ -602,7 +597,6 @@
         const STORAGE_KEY = 'disciplined_checkin_data';
         const THEME_KEY = 'disciplined_theme_pref';
         const TOKEN_KEY = 'disciplined_gh_token';
-        const HABIT_EMOJIS = ['💪','🏃','📚','🎯','🧘','💤','💧','🍎','✍️','🎨','🎵','💻','🌱','🙏','⏰','💰','📝','🧠','❤️','🌟','🔥','⚡','🏆','🎓'];
         const HABIT_COLORS = ['#7c6ff7','#00d2a0','#ff6b6b','#ffa502','#45aaf2','#fc5c65','#26de81','#a55eea','#fed330','#4b7bec','#eb3b5a','#20bf6b'];
 
         // ==================== Animated Background ====================
@@ -738,7 +732,7 @@
             if(raw.habits)return raw;
             return{
                 habits:[{
-                    id:'default',name:'自律打卡',icon:'💪',color:'#7c6ff7',
+                    id:'default',name:'自律打卡',color:'#7c6ff7',
                     createdAt:new Date().toISOString(),
                     checkins:convertCheckins(raw.checkins||{}),
                     bestStreak:raw.bestStreak||0,
@@ -875,7 +869,7 @@
             let html='';
             for(const h of data.habits){
                 const active=h.id===data.activeHabitId;
-                html+=`<div class="habit-tab${active?' active':''}" onclick="switchHabit('${h.id}')">${h.icon} ${h.name}</div>`;
+                html+=`<div class="habit-tab${active?' active':''}" onclick="switchHabit('${h.id}')"><span class="habit-dot" style="background:${h.color||'#7c6ff7'}"></span>${h.name}</div>`;
             }
             html+=`<button class="habit-add" onclick="showHabitModal()" title="新建习惯">+</button>`;
             container.innerHTML=html;
@@ -890,22 +884,10 @@
             document.getElementById('habitModalTitle').textContent=editId?'编辑习惯':'新建习惯';
             const h=editId?data.habits.find(h=>h.id===editId):null;
             document.getElementById('habitNameInput').value=h?h.name:'';
-            renderEmojiPicker(h?h.icon:null);
             renderColorPicker(h?h.color:null);
             modal.classList.add('active');
         }
         function hideHabitModal(){document.getElementById('habitModal').classList.remove('active');editingHabitId=null;}
-        function renderEmojiPicker(selected){
-            const grid=document.getElementById('emojiGrid');
-            let html='';
-            for(const e of HABIT_EMOJIS)html+=`<div class="emoji-opt${e===selected?' selected':''}" onclick="selectEmoji(this,'${e}')">${e}</div>`;
-            grid.innerHTML=html;grid.dataset.selected=selected||HABIT_EMOJIS[0];
-        }
-        function selectEmoji(el,emoji){
-            document.querySelectorAll('.emoji-opt').forEach(e=>e.classList.remove('selected'));
-            el.classList.add('selected');
-            document.getElementById('emojiGrid').dataset.selected=emoji;
-        }
         function renderColorPicker(selected){
             const wrap=document.getElementById('colorPresets');
             let html='';
@@ -920,14 +902,13 @@
         function saveHabit(){
             const name=document.getElementById('habitNameInput').value.trim();
             if(!name){showToast('请输入习惯名称');return;}
-            const icon=document.getElementById('emojiGrid').dataset.selected||HABIT_EMOJIS[0];
             const color=document.getElementById('colorPresets').dataset.selected||HABIT_COLORS[0];
             if(editingHabitId){
                 const h=data.habits.find(h=>h.id===editingHabitId);
-                if(h){h.name=name;h.icon=icon;h.color=color;}
+                if(h){h.name=name;h.color=color;}
             }else{
                 const id='habit_'+Date.now();
-                data.habits.push({id,name,icon,color,createdAt:new Date().toISOString(),checkins:{},bestStreak:0});
+                data.habits.push({id,name,color,createdAt:new Date().toISOString(),checkins:{},bestStreak:0});
             }
             if(!data.habits.find(h=>h.id===data.activeHabitId))data.activeHabitId=data.habits[0].id;
             saveLocalData(data);hideHabitModal();renderHabitTabs();updateUI();syncAfterChange();
@@ -1210,8 +1191,7 @@
             ctx.globalAlpha=1;
             // Top accent bar
             ctx.fillStyle=habit.color||'#7c6ff7';ctx.fillRect(0,0,500,4);
-            // Icon + Name
-            ctx.font='40px sans-serif';ctx.textAlign='center';ctx.fillText(habit.icon||'💪',250,90);
+            // Name only, no icon
             ctx.font='bold 22px "PingFang SC","Microsoft YaHei",sans-serif';ctx.fillStyle=isDark?'#e8e8f0':'#1a1a30';ctx.fillText(habit.name||'自律打卡',250,130);
             // Streak
             ctx.font='bold 120px -apple-system,sans-serif';ctx.fillStyle=isDark?'#ffffff':'#1a1a30';ctx.fillText(String(streak),250,260);
@@ -1301,7 +1281,6 @@
             devRefreshHabitList();
             devOnHabitChange();
             devRefreshSha();
-            checkGarbled();
         }
         function hideDevModal(){
             document.getElementById('devModal').classList.remove('active');
@@ -1324,7 +1303,7 @@
 
         function devRefreshHabitList(){
             const sel=document.getElementById('devHabitSelect');
-            sel.innerHTML=data.habits.map(h=>`<option value="${h.id}">${h.icon} ${h.name}（${Object.keys(h.checkins).length}天）</option>`).join('');
+            sel.innerHTML=data.habits.map(h=>`<option value="${h.id}">${h.name}（${Object.keys(h.checkins).length}天）</option>`).join('');
             if(data.activeHabitId&&data.habits.find(h=>h.id===data.activeHabitId))sel.value=data.activeHabitId;
             devEditingHabitId=null;
             document.getElementById('devHabitEditor').style.display='none';
@@ -1351,11 +1330,6 @@
             devEditingHabitId=h.id;
             document.getElementById('devHabitEditor').style.display='block';
             document.getElementById('devHabitName').value=h.name;
-            // Emoji grid
-            let eh='';
-            for(const e of HABIT_EMOJIS)eh+=`<button class="emoji-opt${e===h.icon?' selected':''}" onclick="document.querySelectorAll('#devEmojiGrid .emoji-opt').forEach(x=>x.classList.remove('selected'));this.classList.add('selected');" style="font-size:18px;padding:4px;border-radius:6px;cursor:pointer;border:1px solid transparent;background:transparent;">${e}</button>`;
-            document.getElementById('devEmojiGrid').innerHTML=eh;
-            document.getElementById('devEmojiGrid').querySelector('.selected')||document.getElementById('devEmojiGrid').querySelector('button')?.classList.add('selected');
             // Color grid
             let ch='';
             for(const c of HABIT_COLORS)ch+=`<div class="color-opt${c===h.color?' selected':''}" style="background:${c}" onclick="document.querySelectorAll('#devColorGrid .color-opt').forEach(x=>x.classList.remove('selected'));this.classList.add('selected');"></div>`;
@@ -1366,8 +1340,6 @@
         function devSaveHabit(){
             const h=data.habits.find(h=>h.id===devEditingHabitId);if(!h)return;
             h.name=document.getElementById('devHabitName').value.trim()||h.name;
-            const selEmoji=document.getElementById('devEmojiGrid').querySelector('.selected');
-            if(selEmoji)h.icon=selEmoji.textContent;
             const selColor=document.getElementById('devColorGrid').querySelector('.selected');
             if(selColor)h.color=selColor.style.background;
             saveLocalData(data);
@@ -1389,15 +1361,6 @@
             devOnHabitChange();
             updateUI();
             showToast('习惯已删除');
-        }
-
-        function devGetSelectedEmoji(){
-            const el=document.getElementById('devEmojiGrid').querySelector('.selected');
-            return el?el.textContent:HABIT_EMOJIS[0];
-        }
-        function devGetSelectedColor(){
-            const el=document.getElementById('devColorGrid').querySelector('.selected');
-            return el?el.style.background:HABIT_COLORS[0];
         }
 
         // --- Checkin operations ---
@@ -1497,99 +1460,6 @@
             }catch(e){document.getElementById('devError').textContent='推送异常: '+e.message;}
         }
 
-        function isGarbledName(name){
-            if(!name)return false;
-            // Chinese chars are U+4E00–U+9FFF, CJK extension A U+3400–U+4DBF, fullwidth etc.
-            // Garbled text from double-encoding: mostly Latin-1 supplement, control chars
-            // Check: if name contains only ASCII-friendly/sane Unicode AND has non-ASCII that looks garbled
-            for(let i=0;i<name.length;i++){
-                const c=name.charCodeAt(i);
-                // Control chars (except space) = suspicious
-                if(c<0x20&&c!==0x20)return true;
-                // Surrogate halves without partner
-                if(c>=0xD800&&c<=0xDFFF)return true;
-            }
-            // Detects double-encoded UTF-8: bytes like 0xC3 0x82 etc. when decoded as Latin-1
-            // Common double-encoding patterns: Ã (0xC3) followed by other high bytes
-            // Quick check: if name contains "Ã" (U+00C3) or "Â" (U+00C2), it's likely garbled
-            if(/[À-ÿ]{2,}/.test(name))return true;
-            // If name has emoji-like characters mixed with Latin-1 garbage
-            if(/[-¿]/.test(name)&&!/[一-鿿]/.test(name))return true;
-            // Longer names that have no CJK but have high Latin-1: likely garbled
-            if(name.length>3&&!/[一-鿿぀-ヿ가-힯]/.test(name)&&/[-ÿ]/.test(name))return true;
-            return false;
-        }
-
-        function checkGarbled(){
-            const warn=document.getElementById('devGarbledWarn');
-            warn.style.display='none';
-            const garbled=[];
-            for(const h of data.habits){
-                if(isGarbledName(h.name))garbled.push(`习惯"${h.name}"`);
-            }
-            // Also check checkin notes
-            for(const h of data.habits){
-                for(const[k,v]of Object.entries(h.checkins)){
-                    if(v&&typeof v==='object'&&v.note&&isGarbledName(v.note)){
-                        if(!garbled.some(g=>g.includes(h.name)))garbled.push(`习惯"${h.name}"的备注`);
-                    }
-                }
-            }
-            if(garbled.length>0){
-                warn.style.display='block';
-                warn.textContent='⚠️ 检测到 '+(garbled.length>1?'多处':'一个')+'数据乱码（UTF-8 双重编码），请点击下方「修复乱码数据」恢复';
-            }
-        }
-
-        async function devRepair(){
-            let fixedCount=0,fixedNames=[];
-            for(const h of data.habits){
-                if(isGarbledName(h.name)){
-                    const oldName=h.name;
-                    h.name='自律打卡'+(fixedNames.length?' '+String.fromCharCode(9311+fixedNames.length):'');
-                    fixedNames.push(oldName);
-                    fixedCount++;
-                }
-                // Fix garbled notes
-                for(const[k,v]of Object.entries(h.checkins)){
-                    if(v&&typeof v==='object'&&v.note&&isGarbledName(v.note)){
-                        v.note='';
-                        fixedCount++;
-                    }
-                }
-            }
-            if(fixedCount===0){
-                showToast('未检测到乱码数据');
-                document.getElementById('devGarbledWarn').style.display='none';
-                return;
-            }
-            saveLocalData(data);
-            devRefreshHabitList();
-            devOnHabitChange();
-            updateUI();
-            checkGarbled();
-            showToast('已修复 '+fixedCount+' 处乱码，推送至云端…');
-            // Push to GitHub
-            const token=getToken();
-            if(token){
-                let sha=null;
-                try{
-                    const resp=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${DATA_PATH}`,{headers:apiHeaders(),cache:'no-store'});
-                    if(resp.ok){const j=await resp.json();sha=j.sha;}
-                }catch(e){}
-                const payload={habits:data.habits,activeHabitId:data.activeHabitId};
-                const body={message:'Repair garbled UTF-8 data',content:b64Encode(JSON.stringify(payload,null,2))};
-                if(sha)body.sha=sha;
-                try{
-                    const resp=await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${DATA_PATH}`,{method:'PUT',headers:apiHeaders(),body:JSON.stringify(body)});
-                    const rb=await resp.json();
-                    if(resp.ok){devRefreshSha();showToast('✅ 修复并推送成功！刷新页面即可');}
-                    else{showToast('修复失败: '+(rb.message||'推送错误'));}
-                }catch(e){showToast('推送异常: '+e.message);}
-            }else{
-                showToast('已修复（无 Token 未推送云端）');
-            }
-        }
 
         // ==================== Event Bindings ====================
         document.getElementById('resetModal').addEventListener('click',function(e){if(e.target===this)hideResetModal();});
